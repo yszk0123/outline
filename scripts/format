@@ -1,0 +1,4 @@
+#!/bin/bash -e
+COMMIT="${1:-HEAD}"
+
+git diff "$COMMIT" --name-only --relative --diff-filter=d | grep '\.tsx\?$' | xargs eslint --ext .ts,.tsx --fix
