@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useReducer } from 'react';
 import produce from 'immer';
 
 type Version = '0.1.0';
@@ -51,13 +51,7 @@ function TreeView({ tree, onChange }: TreeViewProps) {
   );
 }
 
-function updateTree(tree: Tree, updateFn: (tree: Tree) => void): Tree {
-  return produce(tree, (draft: Tree) => {
-    updateTreeInner(draft, draft.id, updateFn);
-  });
-}
-
-function updateTreeInner(
+function updateTree(
   tree: Tree,
   id: string,
   updateFn: (tree: Tree) => void,
@@ -68,26 +62,42 @@ function updateTreeInner(
 
   if (tree.children) {
     tree.children.forEach(child => {
-      updateTreeInner(child, id, updateFn);
+      updateTree(child, id, updateFn);
     });
   }
 }
 
+enum ActionType {
+  TEXT_CHANGED = 'TEXT_CHANGED',
+}
+
+type Action = {
+  type: ActionType.TEXT_CHANGED;
+  payload: { id: string; text: string };
+};
+
+function reducer(state: Data, action: Action): Data {
+  return produce(state, (data: Data) => {
+    switch (action.type) {
+      case ActionType.TEXT_CHANGED: {
+        const { id, text } = action.payload;
+        updateTree(data.tree, id, tree => {
+          tree.text = text;
+        });
+        return;
+      }
+    }
+  });
+}
+
 export function App() {
-  const [data, setData] = useState(initialData);
+  const [data, dispatch] = useReducer(reducer, initialData);
   const handleCopy = useCallback(() => {
     copyToClipboard(data);
   }, [data]);
-  const handleChange = useCallback(
-    (tree: Tree, text: string) => {
-      const newTree = updateTree(tree, e => {
-        e.text = text;
-      });
-      const newData = { ...data, tree: newTree };
-      setData(newData);
-    },
-    [data],
-  );
+  const handleChange = useCallback((tree: Tree, text: string) => {
+    dispatch({ type: ActionType.TEXT_CHANGED, payload: { id: tree.id, text } });
+  }, []);
 
   return (
     <div>
