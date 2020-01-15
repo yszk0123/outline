@@ -45,6 +45,7 @@ interface TreeViewProps {
   onMoveUp: (tree: Tree) => void;
   onMoveDown: (tree: Tree) => void;
   onAdd: (tree: Tree) => void;
+  onRemove: (tree: Tree) => void;
 }
 
 function TreeView({
@@ -53,6 +54,7 @@ function TreeView({
   onMoveUp,
   onMoveDown,
   onAdd,
+  onRemove,
 }: TreeViewProps) {
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,6 +81,12 @@ function TreeView({
     },
     [tree, onAdd],
   );
+  const handleRemove = useCallback(
+    (_event: React.MouseEvent) => {
+      onRemove(tree);
+    },
+    [tree, onRemove],
+  );
 
   return (
     <ul>
@@ -86,6 +94,7 @@ function TreeView({
       <button onClick={handleMoveUp}>Up</button>
       <button onClick={handleMoveDown}>Down</button>
       <button onClick={handleAdd}>Add</button>
+      <button onClick={handleRemove}>Remove</button>
       {(tree.children || []).map((child, i) => {
         return (
           <li key={i}>
@@ -95,6 +104,7 @@ function TreeView({
               onMoveUp={onMoveUp}
               onMoveDown={onMoveDown}
               onAdd={onAdd}
+              onRemove={onRemove}
             />
           </li>
         );
@@ -125,6 +135,7 @@ enum ActionType {
   MOVE_UP = 'MOVE_UP',
   MOVE_DOWN = 'MOVE_DOWN',
   ADDED = 'ADDED',
+  REMOVED = 'REMOVED',
 }
 
 type Action =
@@ -142,6 +153,10 @@ type Action =
     }
   | {
       type: ActionType.ADDED;
+      payload: { id: string };
+    }
+  | {
+      type: ActionType.REMOVED;
       payload: { id: string };
     };
 
@@ -234,6 +249,27 @@ function reducer(state: Data, action: Action): Data {
         });
         return;
       }
+      case ActionType.REMOVED: {
+        const { id } = action.payload;
+        updateTree(data.tree, id, (tree, parent) => {
+          if (!parent) {
+            return;
+          }
+
+          const children = parent.children;
+          if (!children) {
+            return;
+          }
+
+          const index = children.findIndex(e => e.id === tree.id);
+          if (index < 0) {
+            return;
+          }
+
+          children.splice(index, 1);
+        });
+        return;
+      }
     }
   });
 }
@@ -255,6 +291,9 @@ export function App() {
   const handleAdd = useCallback((tree: Tree) => {
     dispatch({ type: ActionType.ADDED, payload: { id: tree.id } });
   }, []);
+  const handleRemove = useCallback((tree: Tree) => {
+    dispatch({ type: ActionType.REMOVED, payload: { id: tree.id } });
+  }, []);
 
   return (
     <div>
@@ -264,6 +303,7 @@ export function App() {
         onMoveUp={handleMoveUp}
         onMoveDown={handleMoveDown}
         onAdd={handleAdd}
+        onRemove={handleRemove}
       />
       <button onClick={handleCopy}>Copy</button>
     </div>
