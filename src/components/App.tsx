@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import produce from 'immer';
 
 type Version = '0.1.0';
 
@@ -50,29 +51,26 @@ function TreeView({ tree, onChange }: TreeViewProps) {
   );
 }
 
-function updateTree(tree: Tree, updateFn: (tree: Tree) => Tree): Tree {
-  return updateTreeInner(tree, tree.id, updateFn);
+function updateTree(tree: Tree, updateFn: (tree: Tree) => void): Tree {
+  return produce(tree, (draft: Tree) => {
+    updateTreeInner(draft, draft.id, updateFn);
+  });
 }
 
 function updateTreeInner(
   tree: Tree,
   id: string,
-  updateFn: (tree: Tree) => Tree,
-): Tree {
+  updateFn: (tree: Tree) => void,
+): void {
   if (tree.id === id) {
-    return updateFn(tree);
+    updateFn(tree);
   }
 
-  const children = tree.children
-    ? tree.children.map(child => {
-        return updateTreeInner(child, id, updateFn);
-      })
-    : undefined;
-
-  return {
-    ...tree,
-    children,
-  };
+  if (tree.children) {
+    tree.children.forEach(child => {
+      updateTreeInner(child, id, updateFn);
+    });
+  }
 }
 
 export function App() {
@@ -82,7 +80,9 @@ export function App() {
   }, [data]);
   const handleChange = useCallback(
     (tree: Tree, text: string) => {
-      const newTree = updateTree(tree, e => ({ ...e, text }));
+      const newTree = updateTree(tree, e => {
+        e.text = text;
+      });
       const newData = { ...data, tree: newTree };
       setData(newData);
     },
