@@ -161,7 +161,7 @@ type Action =
     };
 
 function reducer(state: Data, action: Action): Data {
-  return produce(state, (data: Data) => {
+  return produce(state, data => {
     switch (action.type) {
       case ActionType.TEXT_CHANGED: {
         const { id, text } = action.payload;
