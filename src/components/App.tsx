@@ -18,6 +18,14 @@ function generateId(): string {
   return `${Math.random() * 1000 * 1000 + Date.now()}`;
 }
 
+function createTree(text: string, children?: Tree[]): Tree {
+  return {
+    id: generateId(),
+    text,
+    children,
+  };
+}
+
 const initialData: Data = {
   version: VERSION,
   tree: {
@@ -36,9 +44,16 @@ interface TreeViewProps {
   onChange: (tree: Tree, text: string) => void;
   onMoveUp: (tree: Tree) => void;
   onMoveDown: (tree: Tree) => void;
+  onAdd: (tree: Tree) => void;
 }
 
-function TreeView({ tree, onChange, onMoveUp, onMoveDown }: TreeViewProps) {
+function TreeView({
+  tree,
+  onChange,
+  onMoveUp,
+  onMoveDown,
+  onAdd,
+}: TreeViewProps) {
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const text = event.currentTarget.value;
@@ -58,12 +73,19 @@ function TreeView({ tree, onChange, onMoveUp, onMoveDown }: TreeViewProps) {
     },
     [tree, onMoveDown],
   );
+  const handleAdd = useCallback(
+    (_event: React.MouseEvent) => {
+      onAdd(tree);
+    },
+    [tree, onAdd],
+  );
 
   return (
     <ul>
       <input type="text" value={tree.text} onChange={handleChange} />
       <button onClick={handleMoveUp}>Up</button>
       <button onClick={handleMoveDown}>Down</button>
+      <button onClick={handleAdd}>Add</button>
       {(tree.children || []).map((child, i) => {
         return (
           <li key={i}>
@@ -72,6 +94,7 @@ function TreeView({ tree, onChange, onMoveUp, onMoveDown }: TreeViewProps) {
               onChange={onChange}
               onMoveUp={onMoveUp}
               onMoveDown={onMoveDown}
+              onAdd={onAdd}
             />
           </li>
         );
@@ -101,6 +124,7 @@ enum ActionType {
   TEXT_CHANGED = 'TEXT_CHANGED',
   MOVE_UP = 'MOVE_UP',
   MOVE_DOWN = 'MOVE_DOWN',
+  ADDED = 'ADDED',
 }
 
 type Action =
@@ -114,6 +138,10 @@ type Action =
     }
   | {
       type: ActionType.MOVE_DOWN;
+      payload: { id: string };
+    }
+  | {
+      type: ActionType.ADDED;
       payload: { id: string };
     };
 
@@ -179,6 +207,33 @@ function reducer(state: Data, action: Action): Data {
         });
         return;
       }
+      case ActionType.ADDED: {
+        const { id } = action.payload;
+        updateTree(data.tree, id, (tree, parent) => {
+          if (!parent) {
+            return;
+          }
+
+          const children = parent.children;
+          if (!children) {
+            return;
+          }
+
+          const index = children.findIndex(e => e.id === tree.id);
+          if (index < 0) {
+            return;
+          }
+
+          const newTree = createTree('');
+
+          parent.children = [
+            ...children.slice(0, index + 1),
+            newTree,
+            ...children.slice(index + 1),
+          ];
+        });
+        return;
+      }
     }
   });
 }
@@ -197,6 +252,9 @@ export function App() {
   const handleMoveDown = useCallback((tree: Tree) => {
     dispatch({ type: ActionType.MOVE_DOWN, payload: { id: tree.id } });
   }, []);
+  const handleAdd = useCallback((tree: Tree) => {
+    dispatch({ type: ActionType.ADDED, payload: { id: tree.id } });
+  }, []);
 
   return (
     <div>
@@ -205,6 +263,7 @@ export function App() {
         onChange={handleChange}
         onMoveUp={handleMoveUp}
         onMoveDown={handleMoveDown}
+        onAdd={handleAdd}
       />
       <button onClick={handleCopy}>Copy</button>
     </div>
