@@ -91,10 +91,10 @@ function TreeView({
   return (
     <ul>
       <input type="text" value={tree.text} onChange={handleChange} />
-      <button onClick={handleMoveUp}>Up</button>
-      <button onClick={handleMoveDown}>Down</button>
-      <button onClick={handleAdd}>Add</button>
-      <button onClick={handleRemove}>Remove</button>
+      <button onClick={handleMoveUp}>↑</button>
+      <button onClick={handleMoveDown}>↓</button>
+      <button onClick={handleAdd}>+</button>
+      <button onClick={handleRemove}>-</button>
       {(tree.children || []).map((child, i) => {
         return (
           <li key={i}>
